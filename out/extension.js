@@ -1,74 +1,86 @@
-import * as vscode from 'vscode';
-
-interface EnergyIssue {
-    line: number;
-    column: number;
-    length: number;
-    severity: 'low' | 'medium' | 'high';
-    message: string;
-    category: string;
-    suggestion: string;
-    score: number; // 1-10 (1 = eficiente, 10 = alto consumo)
-}
-
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.activate = activate;
+exports.deactivate = deactivate;
+const vscode = __importStar(require("vscode"));
 class CppEnergyAnalyzer {
-    private decorationTypes: Map<string, vscode.TextEditorDecorationType> = new Map();
-    private diagnosticsCollection: vscode.DiagnosticCollection;
-
+    decorationTypes = new Map();
+    diagnosticsCollection;
     constructor() {
         this.diagnosticsCollection = vscode.languages.createDiagnosticCollection('ambar-cpp-energy');
         this.initializeDecorationTypes();
     }
-
-    private initializeDecorationTypes() {
+    initializeDecorationTypes() {
         // Decorações para diferentes níveis de severidade
         this.decorationTypes.set('high', vscode.window.createTextEditorDecorationType({
             backgroundColor: new vscode.ThemeColor('errorBackground'),
             border: '1px solid red',
             borderRadius: '3px'
         }));
-
         this.decorationTypes.set('medium', vscode.window.createTextEditorDecorationType({
             backgroundColor: new vscode.ThemeColor('warningBackground'),
             border: '1px solid orange',
             borderRadius: '3px'
         }));
-
         this.decorationTypes.set('low', vscode.window.createTextEditorDecorationType({
             backgroundColor: new vscode.ThemeColor('infoBackground'),
             border: '1px solid yellow',
             borderRadius: '3px'
         }));
     }
-
-    public analyzeDocument(document: vscode.TextDocument): EnergyIssue[] {
-        const issues: EnergyIssue[] = [];
+    analyzeDocument(document) {
+        const issues = [];
         const text = document.getText();
         const lines = text.split('\n');
-
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            
             // 1. Memory Management Analysis
             issues.push(...this.analyzeMemoryManagement(line, i));
-            
             // 2. Loop Nesting Analysis
             issues.push(...this.analyzeLoopNesting(lines, i));
-            
             // 3. STL Container Efficiency
             issues.push(...this.analyzeSTLUsage(line, i));
-            
             // 4. String Operations
             issues.push(...this.analyzeStringOperations(line, i));
         }
-
         return issues;
     }
-
     // 1. MEMORY MANAGEMENT ANALYSIS
-    private analyzeMemoryManagement(line: string, lineNumber: number): EnergyIssue[] {
-        const issues: EnergyIssue[] = [];
-        
+    analyzeMemoryManagement(line, lineNumber) {
+        const issues = [];
         // Detectar new/delete sem smart pointers
         const newMatch = line.match(/\bnew\s+\w+/g);
         if (newMatch) {
@@ -84,7 +96,6 @@ class CppEnergyAnalyzer {
                 score: 8
             });
         }
-
         // Detectar delete
         const deleteMatch = line.match(/\bdelete\s+\w+/g);
         if (deleteMatch) {
@@ -100,7 +111,6 @@ class CppEnergyAnalyzer {
                 score: 8
             });
         }
-
         // Detectar malloc/free
         const mallocMatch = line.match(/\bmalloc\s*\(/g);
         if (mallocMatch) {
@@ -116,34 +126,29 @@ class CppEnergyAnalyzer {
                 score: 9
             });
         }
-
         return issues;
     }
-
     // 2. LOOP NESTING ANALYSIS
-    private analyzeLoopNesting(lines: string[], currentLine: number): EnergyIssue[] {
-        const issues: EnergyIssue[] = [];
+    analyzeLoopNesting(lines, currentLine) {
+        const issues = [];
         const line = lines[currentLine];
-        
         // Detectar início de loops
         const loopPattern = /\b(for|while)\s*\(/g;
         const loopMatch = line.match(loopPattern);
-        
         if (loopMatch) {
             // Contar nível de aninhamento
             let nestingLevel = 0;
             let braceCount = 0;
-            
             // Verificar linhas anteriores para determinar aninhamento
             for (let i = Math.max(0, currentLine - 20); i < currentLine; i++) {
                 const prevLine = lines[i];
                 if (prevLine.match(/\b(for|while)\s*\(/)) {
                     braceCount += (prevLine.match(/\{/g) || []).length;
                     braceCount -= (prevLine.match(/\}/g) || []).length;
-                    if (braceCount > 0) nestingLevel++;
+                    if (braceCount > 0)
+                        nestingLevel++;
                 }
             }
-            
             if (nestingLevel >= 2) {
                 const column = line.search(loopPattern);
                 issues.push({
@@ -156,7 +161,8 @@ class CppEnergyAnalyzer {
                     suggestion: 'Considere otimizar algoritmo ou usar estruturas de dados mais eficientes',
                     score: Math.min(10, 6 + nestingLevel)
                 });
-            } else if (nestingLevel === 1) {
+            }
+            else if (nestingLevel === 1) {
                 const column = line.search(loopPattern);
                 issues.push({
                     line: currentLine,
@@ -170,14 +176,11 @@ class CppEnergyAnalyzer {
                 });
             }
         }
-
         return issues;
     }
-
     // 3. STL CONTAINER ANALYSIS
-    private analyzeSTLUsage(line: string, lineNumber: number): EnergyIssue[] {
-        const issues: EnergyIssue[] = [];
-        
+    analyzeSTLUsage(line, lineNumber) {
+        const issues = [];
         // Detectar std::list em operações que deveriam usar vector
         const listMatch = line.match(/std::list<.*>/g);
         if (listMatch) {
@@ -193,7 +196,6 @@ class CppEnergyAnalyzer {
                 score: 5
             });
         }
-
         // Detectar uso de map quando unordered_map seria melhor
         const mapMatch = line.match(/std::map<.*>/g);
         if (mapMatch && !line.includes('unordered_map')) {
@@ -209,7 +211,6 @@ class CppEnergyAnalyzer {
                 score: 4
             });
         }
-
         // Detectar push_back sem reserve
         const pushBackMatch = line.match(/\.push_back\s*\(/g);
         if (pushBackMatch) {
@@ -225,14 +226,11 @@ class CppEnergyAnalyzer {
                 score: 3
             });
         }
-
         return issues;
     }
-
     // 4. STRING OPERATIONS ANALYSIS
-    private analyzeStringOperations(line: string, lineNumber: number): EnergyIssue[] {
-        const issues: EnergyIssue[] = [];
-        
+    analyzeStringOperations(line, lineNumber) {
+        const issues = [];
         // Detectar concatenação de strings em loops (aproximação)
         const stringConcatMatch = line.match(/\w+\s*\+=\s*["'].*["']/g);
         if (stringConcatMatch && line.match(/\b(for|while)\b/)) {
@@ -248,7 +246,6 @@ class CppEnergyAnalyzer {
                 score: 7
             });
         }
-
         // Detectar uso de std::string quando string_view seria suficiente
         const stringParamMatch = line.match(/\bstd::string\s+\w+\s*\)/g);
         if (stringParamMatch) {
@@ -264,7 +261,6 @@ class CppEnergyAnalyzer {
                 score: 3
             });
         }
-
         // Detectar comparação de strings desnecessárias
         const stringCompareMatch = line.match(/\w+\.compare\s*\(/g);
         if (stringCompareMatch) {
@@ -280,24 +276,17 @@ class CppEnergyAnalyzer {
                 score: 2
             });
         }
-
         return issues;
     }
-
-    public updateDecorations(editor: vscode.TextEditor, issues: EnergyIssue[]) {
-        const decorationMap = new Map<string, vscode.Range[]>();
+    updateDecorations(editor, issues) {
+        const decorationMap = new Map();
         decorationMap.set('high', []);
         decorationMap.set('medium', []);
         decorationMap.set('low', []);
-
         issues.forEach(issue => {
-            const range = new vscode.Range(
-                issue.line, issue.column,
-                issue.line, issue.column + issue.length
-            );
+            const range = new vscode.Range(issue.line, issue.column, issue.line, issue.column + issue.length);
             decorationMap.get(issue.severity)?.push(range);
         });
-
         // Aplicar decorações
         decorationMap.forEach((ranges, severity) => {
             const decorationType = this.decorationTypes.get(severity);
@@ -306,80 +295,61 @@ class CppEnergyAnalyzer {
             }
         });
     }
-
-    public updateDiagnostics(document: vscode.TextDocument, issues: EnergyIssue[]) {
-        const diagnostics: vscode.Diagnostic[] = issues.map(issue => {
-            const range = new vscode.Range(
-                issue.line, issue.column,
-                issue.line, issue.column + issue.length
-            );
-
+    updateDiagnostics(document, issues) {
+        const diagnostics = issues.map(issue => {
+            const range = new vscode.Range(issue.line, issue.column, issue.line, issue.column + issue.length);
             const severity = issue.severity === 'high' ? vscode.DiagnosticSeverity.Error :
-                           issue.severity === 'medium' ? vscode.DiagnosticSeverity.Warning :
-                           vscode.DiagnosticSeverity.Information;
-
-            const diagnostic = new vscode.Diagnostic(
-                range,
-                `[${issue.category}] ${issue.message} (Score: ${issue.score}/10)\n💡 ${issue.suggestion}`,
-                severity
-            );
-            
+                issue.severity === 'medium' ? vscode.DiagnosticSeverity.Warning :
+                    vscode.DiagnosticSeverity.Information;
+            const diagnostic = new vscode.Diagnostic(range, `[${issue.category}] ${issue.message} (Score: ${issue.score}/10)\n💡 ${issue.suggestion}`, severity);
             diagnostic.source = 'Ambar - C++ Energy Analyzer';
             return diagnostic;
         });
-
         this.diagnosticsCollection.set(document.uri, diagnostics);
     }
-
-    public dispose() {
+    dispose() {
         this.diagnosticsCollection.dispose();
         this.decorationTypes.forEach(decoration => decoration.dispose());
     }
 }
-
-let analyzer: CppEnergyAnalyzer;
+let analyzer;
 let isRealTimeEnabled = true;
-
-export function activate(context: vscode.ExtensionContext) {
+function activate(context) {
     analyzer = new CppEnergyAnalyzer();
-
     // Comando para analisar arquivo atual
     const analyzeCommand = vscode.commands.registerCommand('ambar-extension.analyzeFile', () => {
         const editor = vscode.window.activeTextEditor;
         if (editor && (editor.document.languageId === 'cpp' || editor.document.languageId === 'c')) {
             analyzeCurrentDocument(editor);
             vscode.window.showInformationMessage('Análise de consumo energético concluída!');
-        } else {
+        }
+        else {
             vscode.window.showWarningMessage('Abra um arquivo C++ para análise.');
         }
     });
-
     // Comando para toggle da análise em tempo real
     const toggleCommand = vscode.commands.registerCommand('ambar-extension.toggleAnalysis', () => {
         isRealTimeEnabled = !isRealTimeEnabled;
         const status = isRealTimeEnabled ? 'ativada' : 'desativada';
         vscode.window.showInformationMessage(`Análise em tempo real ${status}`);
     });
-
     // Análise em tempo real
     const onDidChangeTextDocument = vscode.workspace.onDidChangeTextDocument(event => {
-        if (!isRealTimeEnabled) return;
-        
+        if (!isRealTimeEnabled)
+            return;
         const editor = vscode.window.activeTextEditor;
-        if (editor && editor.document === event.document && 
+        if (editor && editor.document === event.document &&
             (event.document.languageId === 'cpp' || event.document.languageId === 'c')) {
-            
             // Debounce para evitar análise excessiva
             setTimeout(() => {
                 analyzeCurrentDocument(editor);
             }, 500);
         }
     });
-
     // Análise quando arquivo é aberto
     const onDidOpenTextDocument = vscode.workspace.onDidOpenTextDocument(document => {
-        if (!isRealTimeEnabled) return;
-        
+        if (!isRealTimeEnabled)
+            return;
         if (document.languageId === 'cpp' || document.languageId === 'c') {
             const editor = vscode.window.activeTextEditor;
             if (editor && editor.document === document) {
@@ -387,26 +357,17 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }
     });
-
-    context.subscriptions.push(
-        analyzeCommand,
-        toggleCommand,
-        onDidChangeTextDocument,
-        onDidOpenTextDocument,
-        analyzer
-    );
-
+    context.subscriptions.push(analyzeCommand, toggleCommand, onDidChangeTextDocument, onDidOpenTextDocument, analyzer);
     vscode.window.showInformationMessage('Ambar - C++ Energy Analyzer ativado! 🔋⚡');
 }
-
-function analyzeCurrentDocument(editor: vscode.TextEditor) {
+function analyzeCurrentDocument(editor) {
     const issues = analyzer.analyzeDocument(editor.document);
     analyzer.updateDecorations(editor, issues);
     analyzer.updateDiagnostics(editor.document, issues);
 }
-
-export function deactivate() {
+function deactivate() {
     if (analyzer) {
         analyzer.dispose();
     }
 }
+//# sourceMappingURL=extension.js.map

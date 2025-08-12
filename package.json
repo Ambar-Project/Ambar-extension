@@ -1,26 +1,74 @@
 {
   "name": "ambar-extension",
-  "version": "1.0.0",
+  "displayName": "Ambar - C++ Energy Analyzer",
   "description": "Extensão do VS Code que analisa código C++ em tempo real, avaliando sua eficiência energética. Classifica o código conforme o consumo potencial de recursos e destaca trechos de alto custo, sugerindo otimizações para reduzir gasto de energia e melhorar o desempenho de forma sustentável sem comprometer a funcionalidade.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.74.0"
   },
+  "categories": ["Linters", "Other"],
+  "activationEvents": [
+    "onLanguage:cpp",
+    "onLanguage:c"
+  ],
+  "main": "./out/extension.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Ambar-Project/Ambar-extension.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["cpp", "c++", "energy", "performance", "sustainability", "optimization", "green-computing"],
+  "author": "Ambar Project",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Ambar-Project/Ambar-extension/issues"
   },
   "homepage": "https://github.com/Ambar-Project/Ambar-extension#readme",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ambar-extension.analyzeFile",
+        "title": "Analisar Consumo Energético",
+        "category": "Ambar"
+      },
+      {
+        "command": "ambar-extension.toggleAnalysis",
+        "title": "Ativar/Desativar Análise em Tempo Real",
+        "category": "Ambar"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "ambar-extension.analyzeFile",
+          "when": "resourceExtname == .cpp || resourceExtname == .cc || resourceExtname == .cxx",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Ambar - C++ Energy Analyzer",
+      "properties": {
+        "ambar.enableRealTimeAnalysis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ativar análise em tempo real"
+        },
+        "ambar.highlightSeverity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "default": "medium",
+          "description": "Nível mínimo para destacar problemas"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "devDependencies": {
-    "@types/node": "^24.2.1",
     "@types/vscode": "^1.102.0",
+    "@types/node": "^24.2.1",
     "typescript": "^5.9.2"
   }
 }
