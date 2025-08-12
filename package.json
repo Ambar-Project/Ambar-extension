@@ -1,0 +1,26 @@
+{
+  "name": "ambar-extension",
+  "version": "1.0.0",
+  "description": "Extensão do VS Code que analisa código C++ em tempo real, avaliando sua eficiência energética. Classifica o código conforme o consumo potencial de recursos e destaca trechos de alto custo, sugerindo otimizações para reduzir gasto de energia e melhorar o desempenho de forma sustentável sem comprometer a funcionalidade.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ambar-Project/Ambar-extension.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Ambar-Project/Ambar-extension/issues"
+  },
+  "homepage": "https://github.com/Ambar-Project/Ambar-extension#readme",
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "@types/vscode": "^1.102.0",
+    "typescript": "^5.9.2"
+  }
+}
