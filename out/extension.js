@@ -367,6 +367,7 @@ class CppEnergyAnalyzer {
 }
 let analyzer;
 let isRealTimeEnabled = true;
+let analyzeTimeout;
 function activate(context) {
     analyzer = new CppEnergyAnalyzer();
     // Comando para analisar arquivo atual
@@ -385,6 +386,23 @@ function activate(context) {
         isRealTimeEnabled = !isRealTimeEnabled;
         const status = isRealTimeEnabled ? 'ativada' : 'desativada';
         vscode.window.showInformationMessage(`Análise em tempo real ${status}`);
+        const editor = vscode.window.activeTextEditor;
+        if (!isRealTimeEnabled) {
+            // Cancelar timeout pendente
+            if (analyzeTimeout)
+                clearTimeout(analyzeTimeout);
+            // Limpar decorações e diagnósticos
+            if (editor) {
+                analyzer.updateDecorations(editor, []);
+                analyzer.updateDiagnostics(editor.document, []);
+            }
+        }
+        else {
+            // Se reativou, analisar o documento atual imediatamente
+            if (editor && (editor.document.languageId === 'cpp' || editor.document.languageId === 'c')) {
+                analyzeCurrentDocument(editor);
+            }
+        }
     });
     // Análise em tempo real
     const onDidChangeTextDocument = vscode.workspace.onDidChangeTextDocument(event => {
@@ -393,8 +411,10 @@ function activate(context) {
         const editor = vscode.window.activeTextEditor;
         if (editor && editor.document === event.document &&
             (event.document.languageId === 'cpp' || event.document.languageId === 'c')) {
-            // Debounce para evitar análise excessiva
-            setTimeout(() => {
+            // Debounce: cancela timeout anterior
+            if (analyzeTimeout)
+                clearTimeout(analyzeTimeout);
+            analyzeTimeout = setTimeout(() => {
                 analyzeCurrentDocument(editor);
             }, 500);
         }
