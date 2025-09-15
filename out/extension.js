@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
+// Classe principal do analisador
 class CppEnergyAnalyzer {
     decorationTypes = new Map();
     diagnosticsCollection;
@@ -61,21 +62,66 @@ class CppEnergyAnalyzer {
             borderRadius: '3px'
         }));
     }
+    stripComments(line, inBlockComment) {
+        let code = line;
+        // Detectar início de comentário de bloco
+        if (inBlockComment.value) {
+            const endIndex = code.indexOf('*/');
+            if (endIndex >= 0) {
+                code = code.slice(endIndex + 2);
+                inBlockComment.value = false;
+            }
+            else {
+                return ''; // Linha inteira é comentário
+            }
+        }
+        // Remover comentários de bloco dentro da linha
+        let blockStart = code.indexOf('/*');
+        while (blockStart >= 0) {
+            const blockEnd = code.indexOf('*/', blockStart + 2);
+            if (blockEnd >= 0) {
+                code = code.slice(0, blockStart) + code.slice(blockEnd + 2);
+                blockStart = code.indexOf('/*');
+            }
+            else {
+                code = code.slice(0, blockStart);
+                inBlockComment.value = true;
+                break;
+            }
+        }
+        // Remover comentários de linha
+        const lineCommentIndex = code.indexOf('//');
+        if (lineCommentIndex >= 0) {
+            code = code.slice(0, lineCommentIndex);
+        }
+        return code;
+    }
+    // Principal função de análise que percorre o documento e aplica os diagnósticos
     analyzeDocument(document) {
         const issues = [];
         const text = document.getText();
         const lines = text.split('\n');
+        // Cria o objeto que acompanha se estamos dentro de um comentário de bloco
+        const inBlockComment = { value: false };
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
+            const originalLine = lines[i];
+            // Remove comentários da linha (linha limpa)
+            const line = this.stripComments(originalLine, inBlockComment);
+            // Ignora linhas vazias ou totalmente comentadas
+            if (line.trim().length === 0)
+                continue;
             // 1. Memory Management Analysis
             issues.push(...this.analyzeMemoryManagement(line, i));
-            // 2. Loop Nesting Analysis
-            issues.push(...this.analyzeLoopNesting(lines, i));
-            // 3. STL Container Efficiency
+            // 2. STL Container Efficiency
             issues.push(...this.analyzeSTLUsage(line, i));
-            // 4. String Operations
+            // 3. String Operations
             issues.push(...this.analyzeStringOperations(line, i));
         }
+        // Preparar linhas limpas para análise de aninhamento de loops
+        inBlockComment.value = false; // Resetar estado de comentário de bloco
+        const cleanLines = lines.map(line => this.stripComments(line, inBlockComment));
+        // 4. Loop Nesting Analysis (análise completa do documento)
+        issues.push(...this.analyzeLoopNesting(cleanLines));
         return issues;
     }
     // 1. MEMORY MANAGEMENT ANALYSIS
@@ -129,51 +175,58 @@ class CppEnergyAnalyzer {
         return issues;
     }
     // 2. LOOP NESTING ANALYSIS
-    analyzeLoopNesting(lines, currentLine) {
+    analyzeLoopNesting(lines) {
         const issues = [];
-        const line = lines[currentLine];
-        // Detectar início de loops
-        const loopPattern = /\b(for|while)\s*\(/g;
-        const loopMatch = line.match(loopPattern);
-        if (loopMatch) {
-            // Contar nível de aninhamento
-            let nestingLevel = 0;
-            let braceCount = 0;
-            // Verificar linhas anteriores para determinar aninhamento
-            for (let i = Math.max(0, currentLine - 20); i < currentLine; i++) {
-                const prevLine = lines[i];
-                if (prevLine.match(/\b(for|while)\s*\(/)) {
-                    braceCount += (prevLine.match(/\{/g) || []).length;
-                    braceCount -= (prevLine.match(/\}/g) || []).length;
-                    if (braceCount > 0)
-                        nestingLevel++;
+        const loopStack = [];
+        // Objeto que mantém o estado de comentários de bloco
+        const inBlockComment = { value: false };
+        for (let i = 0; i < lines.length; i++) {
+            const originalLine = lines[i];
+            // Remove comentários de linha e bloco
+            const line = this.stripComments(originalLine, inBlockComment);
+            // Ignora linhas vazias
+            if (line.trim().length === 0)
+                continue;
+            // Detectar início de loops
+            const loopPattern = /\b(for|while)\s*\(/g;
+            let loopMatch;
+            while ((loopMatch = loopPattern.exec(line)) !== null) {
+                const column = loopMatch.index;
+                const loopType = loopMatch[1];
+                // Adicionar loop à pilha
+                loopStack.push({ line: i, column: column, type: loopType });
+                // Verificar nível de aninhamento atual
+                const nestingLevel = loopStack.length;
+                if (nestingLevel >= 3) {
+                    issues.push({
+                        line: i,
+                        column: column,
+                        length: loopMatch[0].length,
+                        severity: 'high',
+                        message: `Loop altamente aninhado (nível ${nestingLevel}) - Complexidade O(n^${nestingLevel})`,
+                        category: 'Algorithmic Complexity',
+                        suggestion: 'Considere refatorar o algoritmo ou usar estruturas de dados mais eficientes',
+                        score: Math.min(10, 7 + nestingLevel)
+                    });
+                }
+                else if (nestingLevel === 2) {
+                    issues.push({
+                        line: i,
+                        column: column,
+                        length: loopMatch[0].length,
+                        severity: 'medium',
+                        message: 'Loop duplo - Complexidade O(n²)',
+                        category: 'Algorithmic Complexity',
+                        suggestion: 'Verifique se pode ser otimizado com algoritmos mais eficientes',
+                        score: 6
+                    });
                 }
             }
-            if (nestingLevel >= 2) {
-                const column = line.search(loopPattern);
-                issues.push({
-                    line: currentLine,
-                    column: column,
-                    length: loopMatch[0].length,
-                    severity: 'high',
-                    message: `Loop aninhado (nível ${nestingLevel + 1}) - Complexidade O(n^${nestingLevel + 1})`,
-                    category: 'Algorithmic Complexity',
-                    suggestion: 'Considere otimizar algoritmo ou usar estruturas de dados mais eficientes',
-                    score: Math.min(10, 6 + nestingLevel)
-                });
-            }
-            else if (nestingLevel === 1) {
-                const column = line.search(loopPattern);
-                issues.push({
-                    line: currentLine,
-                    column: column,
-                    length: loopMatch[0].length,
-                    severity: 'medium',
-                    message: 'Loop duplo - Complexidade O(n²)',
-                    category: 'Algorithmic Complexity',
-                    suggestion: 'Verifique se pode ser otimizado',
-                    score: 6
-                });
+            // Detectar fechamento de blocos para remover loops da pilha
+            const openBraces = (line.match(/\{/g) || []).length;
+            const closeBraces = (line.match(/\}/g) || []).length;
+            for (let j = 0; j < closeBraces && loopStack.length > 0; j++) {
+                loopStack.pop();
             }
         }
         return issues;
@@ -220,7 +273,7 @@ class CppEnergyAnalyzer {
                 column: column,
                 length: 10,
                 severity: 'low',
-                message: 'push_back pode causar reallocações',
+                message: 'push_back pode causar realocações',
                 category: 'STL Efficiency',
                 suggestion: 'Use reserve() se souber o tamanho aproximado',
                 score: 3
@@ -228,22 +281,22 @@ class CppEnergyAnalyzer {
         }
         return issues;
     }
-    // 4. STRING OPERATIONS ANALYSIS
+    // 4. STRING OPERATIONS ANALYSIS - VERSÃO MELHORADA
     analyzeStringOperations(line, lineNumber) {
         const issues = [];
-        // Detectar concatenação de strings em loops (aproximação)
+        // Detectar concatenação de strings com += (possível problema se em loop)
         const stringConcatMatch = line.match(/\w+\s*\+=\s*["'].*["']/g);
-        if (stringConcatMatch && line.match(/\b(for|while)\b/)) {
+        if (stringConcatMatch) {
             const column = line.indexOf('+=');
             issues.push({
                 line: lineNumber,
                 column: column,
                 length: 2,
-                severity: 'high',
-                message: 'Concatenação de string em loop',
+                severity: 'low',
+                message: 'Concatenação de string com +=',
                 category: 'String Operations',
-                suggestion: 'Use std::stringstream ou reserve() para strings',
-                score: 7
+                suggestion: 'Se em loop, considere std::stringstream ou reserve()',
+                score: 4
             });
         }
         // Detectar uso de std::string quando string_view seria suficiente

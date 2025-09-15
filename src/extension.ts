@@ -43,14 +43,61 @@ class CppEnergyAnalyzer {
         }));
     }
 
+    private stripComments(line: string, inBlockComment: { value: boolean }): string {
+        let code = line;
+
+        // Detectar início de comentário de bloco
+        if (inBlockComment.value) {
+            const endIndex = code.indexOf('*/');
+            if (endIndex >= 0) {
+                code = code.slice(endIndex + 2);
+                inBlockComment.value = false;
+            } else {
+                return ''; // Linha inteira é comentário
+            }
+        }
+
+        // Remover comentários de bloco dentro da linha
+        let blockStart = code.indexOf('/*');
+        while (blockStart >= 0) {
+            const blockEnd = code.indexOf('*/', blockStart + 2);
+            if (blockEnd >= 0) {
+                code = code.slice(0, blockStart) + code.slice(blockEnd + 2);
+                blockStart = code.indexOf('/*');
+            } else {
+                code = code.slice(0, blockStart);
+                inBlockComment.value = true;
+                break;
+            }
+        }
+
+        // Remover comentários de linha
+        const lineCommentIndex = code.indexOf('//');
+        if (lineCommentIndex >= 0) {
+            code = code.slice(0, lineCommentIndex);
+        }
+
+        return code;
+    }
+
+
     // Principal função de análise que percorre o documento e aplica os diagnósticos
     public analyzeDocument(document: vscode.TextDocument): EnergyIssue[] {
         const issues: EnergyIssue[] = [];
         const text = document.getText();
         const lines = text.split('\n');
 
+        // Cria o objeto que acompanha se estamos dentro de um comentário de bloco
+        const inBlockComment = { value: false };
+
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
+            const originalLine = lines[i];
+            
+            // Remove comentários da linha (linha limpa)
+            const line = this.stripComments(originalLine, inBlockComment);
+
+            // Ignora linhas vazias ou totalmente comentadas
+            if (line.trim().length === 0) continue;
             
             // 1. Memory Management Analysis
             issues.push(...this.analyzeMemoryManagement(line, i));
@@ -62,11 +109,16 @@ class CppEnergyAnalyzer {
             issues.push(...this.analyzeStringOperations(line, i));
         }
 
+        // Preparar linhas limpas para análise de aninhamento de loops
+        inBlockComment.value = false; // Resetar estado de comentário de bloco
+        const cleanLines = lines.map(line => this.stripComments(line, inBlockComment));
+
         // 4. Loop Nesting Analysis (análise completa do documento)
-        issues.push(...this.analyzeLoopNesting(lines));
+        issues.push(...this.analyzeLoopNesting(cleanLines));
 
         return issues;
     }
+
 
     // 1. MEMORY MANAGEMENT ANALYSIS
     private analyzeMemoryManagement(line: string, lineNumber: number): EnergyIssue[] {
@@ -127,30 +179,33 @@ class CppEnergyAnalyzer {
     private analyzeLoopNesting(lines: string[]): EnergyIssue[] {
         const issues: EnergyIssue[] = [];
         const loopStack: { line: number, column: number, type: string }[] = [];
-        
+
+        // Objeto que mantém o estado de comentários de bloco
+        const inBlockComment = { value: false };
+
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const trimmedLine = line.trim();
-            
-            // Ignorar comentários e linhas vazias
-            if (trimmedLine.startsWith('//') || trimmedLine.startsWith('/*') || trimmedLine.length === 0) {
-                continue;
-            }
-            
+            const originalLine = lines[i];
+
+            // Remove comentários de linha e bloco
+            const line = this.stripComments(originalLine, inBlockComment);
+
+            // Ignora linhas vazias
+            if (line.trim().length === 0) continue;
+
             // Detectar início de loops
             const loopPattern = /\b(for|while)\s*\(/g;
             let loopMatch;
-            
+
             while ((loopMatch = loopPattern.exec(line)) !== null) {
                 const column = loopMatch.index;
                 const loopType = loopMatch[1];
-                
+
                 // Adicionar loop à pilha
                 loopStack.push({ line: i, column: column, type: loopType });
-                
+
                 // Verificar nível de aninhamento atual
                 const nestingLevel = loopStack.length;
-                
+
                 if (nestingLevel >= 3) {
                     issues.push({
                         line: i,
@@ -175,12 +230,11 @@ class CppEnergyAnalyzer {
                     });
                 }
             }
-            
+
             // Detectar fechamento de blocos para remover loops da pilha
             const openBraces = (line.match(/\{/g) || []).length;
             const closeBraces = (line.match(/\}/g) || []).length;
-            
-            // Simplificação: remover loops da pilha quando encontrar fechamento de blocos
+
             for (let j = 0; j < closeBraces && loopStack.length > 0; j++) {
                 loopStack.pop();
             }
@@ -188,6 +242,7 @@ class CppEnergyAnalyzer {
 
         return issues;
     }
+
 
     // 3. STL CONTAINER ANALYSIS
     private analyzeSTLUsage(line: string, lineNumber: number): EnergyIssue[] {

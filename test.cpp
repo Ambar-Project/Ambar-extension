@@ -1,24 +1,56 @@
 #include <iostream>
 #include <vector>
+#include <list>
+#include <map>
 #include <string>
+#include <memory>
+#include <unordered_map>
+
 
 int main() {
-    // Problema 1: Memory management (Score 8)
-    int* ptr = new int[100];
-    delete[] ptr;
+    // MEMORY MANAGEMENT
+    int* p = new int(5); // Deve ser detectado
+
+    std::unique_ptr<int> q = std::make_unique<int>(10); // Não deve ser detectado
+
+    delete p; // Deve ser detectado
+
+    int* r = (int*)malloc(sizeof(int)); // Deve ser detectado
+
+    free(r); // Deve ser detectado
+
+    // STL USAGE
+    std::list<int> l; // Deve ser detectado
+
+    std::vector<int> v;
+
+    v.push_back(10); // Deve ser detectado (se não tiver reserve)
+
+    std::map<int,int> m; // Deve ser detectado
+
+    std::unordered_map<int,int> um; // Não deve ser detectado
+
+    // STRING OPERATIONS
+    std::string s = "Hello";
+
+    s += " World"; // Deve ser detectado
+
+    std::string t("Test"); // Pode ser detectado
     
-    // Problema 2: Loop aninhado (Score 6) 
-    for(int i = 0; i < 100; i++) {
-        for(int j = 0; j < 100; j++) {
-            std::cout << i * j << std::endl;
+    t.compare("Other"); // Deve ser detectado
+
+    // LOOP NESTING
+    for (int i = 0; i < 10; i++) { // Deve ser detectado
+        for (int j = 0; j < 5; j++) { // Deve ser detectado como loop duplo
+            std::cout << i << j << std::endl;
         }
     }
-    
-    // Problema 3: String concatenation em loop (Score 7)
-    std::string result = "";
-    for(int i = 0; i < 1000; i++) {
-        result += "texto";
-    }
-    
+
+    /* 
+    for(int i = 0; i < 10; i++) { // Não deve ser detectado (comentado)
+        std::cout << i;
+    } 
+    */
+
     return 0;
 }
