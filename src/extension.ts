@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+// Definição da estrutura de um problema de consumo energético (Problema | 'Issue')
 interface EnergyIssue {
     line: number;
     column: number;
@@ -11,6 +12,7 @@ interface EnergyIssue {
     score: number; // 1-10 (1 = eficiente, 10 = alto consumo)
 }
 
+// Classe principal do analisador
 class CppEnergyAnalyzer {
     private decorationTypes: Map<string, vscode.TextEditorDecorationType> = new Map();
     private diagnosticsCollection: vscode.DiagnosticCollection;
@@ -41,6 +43,7 @@ class CppEnergyAnalyzer {
         }));
     }
 
+    // Principal função de análise que percorre o documento e aplica os diagnósticos
     public analyzeDocument(document: vscode.TextDocument): EnergyIssue[] {
         const issues: EnergyIssue[] = [];
         const text = document.getText();
@@ -120,7 +123,7 @@ class CppEnergyAnalyzer {
         return issues;
     }
 
-    // 2. LOOP NESTING ANALYSIS - VERSÃO CORRIGIDA
+    // 2. LOOP NESTING ANALYSIS
     private analyzeLoopNesting(lines: string[]): EnergyIssue[] {
         const issues: EnergyIssue[] = [];
         const loopStack: { line: number, column: number, type: string }[] = [];
