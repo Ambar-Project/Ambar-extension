@@ -118,5 +118,5 @@ No `settings.json` do VS Code, você pode ajustar:
 
 ## 📄 Licença
 
-Distribuído sob a licença ISC.
+Distribuído sob a licença MIT.
 Feito com ❤️ pelo **Ambar Project**.
