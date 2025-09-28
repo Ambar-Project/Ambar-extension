@@ -3,8 +3,9 @@
   "displayName": "Ambar - C++ Energy Analyzer",
   "description": "Extensão do VS Code que analisa código C++ em tempo real, avaliando sua eficiência energética. Classifica o código conforme o consumo potencial de recursos e destaca trechos de alto custo, sugerindo otimizações para reduzir gasto de energia e melhorar o desempenho de forma sustentável sem comprometer a funcionalidade.",
   "version": "1.0.0",
+  "publisher": "AmbarExtension",
   "engines": {
-    "vscode": "^1.74.0"
+    "vscode": "^1.102.0"
   },
   "categories": [
     "Linters",
@@ -84,9 +85,7 @@
   "devDependencies": {
     "@types/node": "^24.2.1",
     "@types/vscode": "^1.102.0",
-    "typescript": "^5.9.2"
-  },
-  "dependencies": {
+    "typescript": "^5.9.2",
     "tree-sitter": "^0.22.4",
     "tree-sitter-cpp": "^0.23.4"
   }

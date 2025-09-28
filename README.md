@@ -33,7 +33,7 @@ O analisador identifica padrões de código que podem gerar consumo excessivo de
 2. Instale as dependências:
 
 ```bash
-   npm install
+   npm install --legacy-peer-deps
 ```
 
 3. Compile o código TypeScript:
