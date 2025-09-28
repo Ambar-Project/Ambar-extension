@@ -6,48 +6,43 @@
 #include <memory>
 #include <unordered_map>
 
-
 int main() {
-    // MEMORY MANAGEMENT
-    int* p = new int(5); // Deve ser detectado
+    int* p = new int(5);
 
-    std::unique_ptr<int> q = std::make_unique<int>(10); // Não deve ser detectado
+    std::unique_ptr<int> q = std::make_unique<int>(10);
 
-    delete p; // Deve ser detectado
+    delete p;
 
-    int* r = (int*)malloc(sizeof(int)); // Deve ser detectado
+    int* r = (int*)malloc(sizeof(int));
 
-    free(r); // Deve ser detectado
+    free(r);
 
-    // STL USAGE
-    std::list<int> l; // Deve ser detectado
+    std::list<int> l;
 
     std::vector<int> v;
 
-    v.push_back(10); // Deve ser detectado (se não tiver reserve)
+    v.push_back(10);
 
-    std::map<int,int> m; // Deve ser detectado
+    std::map<int,int> m;
 
-    std::unordered_map<int,int> um; // Não deve ser detectado
+    std::unordered_map<int,int> um;
 
-    // STRING OPERATIONS
     std::string s = "Hello";
 
-    s += " World"; // Deve ser detectado
+    s += " World";
 
-    std::string t("Test"); // Pode ser detectado
+    std::string t("Test");
     
-    t.compare("Other"); // Deve ser detectado
+    t.compare("Other");
 
-    // LOOP NESTING
-    for (int i = 0; i < 10; i++) { // Deve ser detectado
-        for (int j = 0; j < 5; j++) { // Deve ser detectado como loop duplo
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 5; j++) {
             std::cout << i << j << std::endl;
         }
     }
 
     /* 
-    for(int i = 0; i < 10; i++) { // Não deve ser detectado (comentado)
+    for(int i = 0; i < 10; i++) {
         std::cout << i;
     } 
     */
