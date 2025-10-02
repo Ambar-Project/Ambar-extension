@@ -1,6 +1,18 @@
+# Ignorar pastas de dependências
 node_modules
-src
 .vscode
-*.ts
+.git
+.gitignore
+
+# Ignorar arquivos de configuração e build
+tsconfig.json
 *.map
-*.md
+*.ts
+*.log
+*.vsix
+package-lock.json
+
+# Ignorar exemplos e testes
+test.cpp
+test2.cpp
+tests/**
